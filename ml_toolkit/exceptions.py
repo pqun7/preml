@@ -37,6 +37,13 @@ class MLToolkitError(Exception):
             return f"{self.message} [Details: {self.details}]"
         return self.message
 
+    def __repr__(self) -> str:
+        """Return a developer‑friendly representation for debugging."""
+        cls_name = type(self).__name__
+        if self.details is None:
+            return f"{cls_name}({self.message!r})"
+        return f"{cls_name}({self.message!r}, details={self.details!r})"
+
 
 class DataValidationError(MLToolkitError):
     """Raised when input data fails validation.

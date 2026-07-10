@@ -1,4 +1,5 @@
-"""Facts extraction layer — computes statistical profiles without
+"""
+Facts extraction layer — computes statistical profiles without
 making any decisions or recommendations.
 
 All functions and methods in this module are purely computational.
@@ -81,6 +82,21 @@ class StatisticsEngine:
             exclude=[np.number]
         ).columns.tolist()
 
+        # Safe defaults for all configurable parameters (consistent with
+        # the recommendation engine's approach).
+        self.iqr_multiplier = getattr(self.config, "iqr_multiplier", 1.5)
+        self.zscore_threshold = getattr(self.config, "zscore_threshold", 3.0)
+        self.outlier_method = getattr(self.config, "outlier_method", "iqr")
+        self.constant_variance_threshold = getattr(
+            self.config, "constant_variance_threshold", 1e-8
+        )
+        self.max_unique_for_categorical_like = getattr(
+            self.config, "max_unique_for_categorical_like", 10
+        )
+        self.correlation_threshold = getattr(
+            self.config, "correlation_threshold", 0.7
+        )
+
     # ------------------------------------------------------------------
     # Dataset‑level checks
     # ------------------------------------------------------------------
@@ -130,9 +146,10 @@ class StatisticsEngine:
         -------
         InfiniteReport
         """
-        inf_mask = self.df.replace([np.inf, -np.inf], np.nan).isna() & ~self.df.isna()
-        col_counts = inf_mask.sum()
-        cols_with_inf = col_counts[col_counts > 0]
+        # Using isin is both simpler and faster than replace→isna.
+        inf_mask = self.df.isin([np.inf, -np.inf])
+        inf_counts = inf_mask.sum()
+        cols_with_inf = inf_counts[inf_counts > 0]
         return InfiniteReport(
             columns_with_inf=cols_with_inf.index.tolist(),
             counts=cols_with_inf.to_dict(),
@@ -195,14 +212,14 @@ class StatisticsEngine:
         q1 = series.quantile(0.25)
         q3 = series.quantile(0.75)
         iqr = q3 - q1
-        lower = q1 - self.config.iqr_multiplier * iqr
-        upper = q3 + self.config.iqr_multiplier * iqr
+        lower = q1 - self.iqr_multiplier * iqr
+        upper = q3 + self.iqr_multiplier * iqr
         mask = (series < lower) | (series > upper)
         return lower, upper, mask
 
     def _zscore_outliers(
         self, series: pd.Series
-    ) -> Tuple[Optional[float], Optional[float], pd.Series]:
+    ) -> Tuple[None, None, pd.Series]:
         """Z‑score based outlier detection.
 
         Parameters
@@ -217,7 +234,7 @@ class StatisticsEngine:
         outlier_mask : pd.Series (boolean)
         """
         z = np.abs(sp_stats.zscore(series, nan_policy="omit"))
-        mask = z > self.config.zscore_threshold
+        mask = z > self.zscore_threshold
         return None, None, mask
 
     def compute_outlier_report(self) -> List[OutlierReport]:
@@ -228,7 +245,7 @@ class StatisticsEngine:
         List[OutlierReport]
         """
         reports: List[OutlierReport] = []
-        method = self.config.outlier_method
+        method = self.outlier_method
 
         for col in self._numeric_cols:
             series = self.df[col].dropna()
@@ -264,11 +281,18 @@ class StatisticsEngine:
     # ------------------------------------------------------------------
     # Distribution profiles (numeric / categorical)
     # ------------------------------------------------------------------
+    @staticmethod
+    def _safe_round(value: Any, ndigits: int = 4) -> Any:
+        """Round a value safely, returning NaN on failure."""
+        try:
+            return round(float(value), ndigits)
+        except (TypeError, ValueError):
+            return np.nan
+
     def _compute_numeric_profile(self, col: str) -> NumericDistributionProfile:
         """Create a NumericDistributionProfile for a single column."""
         series = self.df[col].dropna()
         if len(series) == 0:
-            # Return a profile with defaults; the caller will handle empty
             return NumericDistributionProfile(
                 column=col,
                 count=0,
@@ -280,22 +304,18 @@ class StatisticsEngine:
                 max=np.nan,
             )
 
-        # Safe rounding helper for numpy scalars / non-numeric values
-        def _safe_round(val, nd=4):
-            try:
-                return round(float(val), nd)
-            except Exception:
-                return np.nan
-
-        # Percentiles
-        percentiles = {
-            "1%": _safe_round(series.quantile(0.01), 4),
-            "5%": _safe_round(series.quantile(0.05), 4),
-            "25%": _safe_round(series.quantile(0.25), 4),
-            "50%": _safe_round(series.quantile(0.50), 4),
-            "75%": _safe_round(series.quantile(0.75), 4),
-            "95%": _safe_round(series.quantile(0.95), 4),
-            "99%": _safe_round(series.quantile(0.99), 4),
+        # Compute all required percentiles in one pass for performance.
+        q_vals = series.quantile(
+            [0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99]
+        )
+        percentiles: Dict[str, float] = {
+            "1%": self._safe_round(q_vals[0.01], 4),
+            "5%": self._safe_round(q_vals[0.05], 4),
+            "25%": self._safe_round(q_vals[0.25], 4),
+            "50%": self._safe_round(q_vals[0.50], 4),
+            "75%": self._safe_round(q_vals[0.75], 4),
+            "95%": self._safe_round(q_vals[0.95], 4),
+            "99%": self._safe_round(q_vals[0.99], 4),
         }
 
         mean_val = series.mean()
@@ -317,22 +337,24 @@ class StatisticsEngine:
         neg_pct = (series < 0).mean() * 100
 
         unique_count = series.nunique()
-        is_categorical_like = unique_count <= self.config.max_unique_for_categorical_like
+        is_categorical_like = (
+            unique_count <= self.max_unique_for_categorical_like
+        )
 
         return NumericDistributionProfile(
             column=col,
             count=len(series),
-            mean=_safe_round(mean_val, 4),
-            median=_safe_round(median_val, 4),
-            std=_safe_round(std_val, 4),
-            cv=_safe_round(cv_val, 4) if not np.isnan(cv_val) else np.nan,
-            min=_safe_round(series.min(), 4),
-            max=_safe_round(series.max(), 4),
+            mean=self._safe_round(mean_val, 4),
+            median=self._safe_round(median_val, 4),
+            std=self._safe_round(std_val, 4),
+            cv=self._safe_round(cv_val, 4),
+            min=self._safe_round(series.min(), 4),
+            max=self._safe_round(series.max(), 4),
             percentiles=percentiles,
-            skewness=_safe_round(sk, 4) if not np.isnan(sk) else np.nan,
-            kurtosis=_safe_round(ku, 4) if not np.isnan(ku) else np.nan,
-            zero_percent=_safe_round(zero_pct, 2),
-            negative_percent=_safe_round(neg_pct, 2),
+            skewness=self._safe_round(sk, 4),
+            kurtosis=self._safe_round(ku, 4),
+            zero_percent=self._safe_round(zero_pct, 2),
+            negative_percent=self._safe_round(neg_pct, 2),
             is_categorical_like=is_categorical_like,
             unique_count=unique_count,
         )
@@ -380,7 +402,7 @@ class StatisticsEngine:
 
         # Variance thresholds for constant detection
         variances = self.df[self._numeric_cols].var(numeric_only=True)
-        quasi_const_mask = variances < self.config.constant_variance_threshold
+        quasi_const_mask = variances < self.constant_variance_threshold
         quasi_const = variances[quasi_const_mask].index.tolist()
 
         # Constant columns (nunique <= 1) across all columns
@@ -435,7 +457,7 @@ class StatisticsEngine:
 
         corr_mat = self.df[self._numeric_cols].corr()
         pairs: List[CorrelationPair] = []
-        threshold = self.config.correlation_threshold
+        threshold = self.correlation_threshold
 
         for i in range(len(corr_mat.columns)):
             for j in range(i + 1, len(corr_mat.columns)):

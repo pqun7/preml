@@ -1,4 +1,5 @@
-"""Feature engineering suggestion layer — generates proposals for new
+"""
+Feature engineering suggestion layer — generates proposals for new
 features based solely on statistical evidence, never on column names.
 
 All suggestions are data‑driven and include confidence, evidence, and
@@ -8,9 +9,11 @@ to detect datetime columns, but never recomputes statistics.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+import logging
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 import pandas as pd
+import numpy as np
 
 from ml_toolkit.config import MLToolkitConfig, default_config
 from ml_toolkit.schema import (
@@ -19,10 +22,13 @@ from ml_toolkit.schema import (
     Evidence,
 )
 
+logger = logging.getLogger(__name__)
+
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
 def _get_profiles(analysis_result: Dict[str, Any]) -> List[FeatureProfile]:
+    """Extract feature profiles from the analysis result dictionary."""
     return analysis_result.get("feature_profiles", [])
 
 
@@ -74,13 +80,27 @@ class FeatureEngineering:
         self.config = config or default_config
         self.profiles = _get_profiles(analysis_result)
         self.correlation_pairs = analysis_result.get("correlation_pairs", [])
-        # Build a lookup for numeric profiles
+
+        # Build lookups for numeric and categorical profiles
         self.numeric_map: Dict[str, FeatureProfile] = {
             p.column: p for p in self.profiles if p.numeric_profile
         }
         self.categorical_map: Dict[str, FeatureProfile] = {
             p.column: p for p in self.profiles if p.categorical_profile
         }
+
+        # Precompute highly correlated pairs (both directions) for reuse
+        self._highly_corr_set: FrozenSet[Tuple[str, str]] = frozenset(
+            (p.feature_a, p.feature_b) for p in self.correlation_pairs
+        ) | frozenset(
+            (p.feature_b, p.feature_a) for p in self.correlation_pairs
+        )
+
+        # Safe configuration thresholds
+        self.skewness_threshold = getattr(self.config, "skewness_threshold", 1.0)
+        self.max_unique_for_categorical_like = getattr(
+            self.config, "max_unique_for_categorical_like", 10
+        )
 
     def suggest_features(self) -> List[Recommendation]:
         """Generate a list of feature engineering suggestions.
@@ -97,52 +117,63 @@ class FeatureEngineering:
         suggestions.extend(self._suggest_power_transforms())
         suggestions.extend(self._suggest_datetime_features())
         suggestions.extend(self._suggest_feature_crossing())
+
+        logger.info("Generated %d feature engineering suggestions.", len(suggestions))
         return suggestions
 
     # ------------------------------------------------------------------
     # 1. Ratios
     # ------------------------------------------------------------------
     def _suggest_ratios(self) -> List[Recommendation]:
-        """Suggest ratios for pairs of numeric columns that are safe to divide."""
-        recs = []
+        """Suggest ratios for pairs of numeric columns that are safe to divide.
+
+        Confidence is raised when the two columns have similar coefficients
+        of variation, indicating a plausible relative measure.
+        """
+        recs: List[Recommendation] = []
         numeric_cols = list(self.numeric_map.keys())
-        # Use a set of highly correlated pairs to avoid redundant ratios
-        highly_corr_pairs = {
-            (p.feature_a, p.feature_b)
-            for p in self.correlation_pairs
-        } | {
-            (p.feature_b, p.feature_a)
-            for p in self.correlation_pairs
-        }
 
         for i in range(len(numeric_cols)):
             for j in range(i + 1, len(numeric_cols)):
-                col_a = numeric_cols[i]
-                col_b = numeric_cols[j]
+                col_a, col_b = numeric_cols[i], numeric_cols[j]
+                if (col_a, col_b) in self._highly_corr_set:
+                    continue  # avoid redundant ratios for highly correlated pairs
+
                 prof_a = self.numeric_map[col_a].numeric_profile
                 prof_b = self.numeric_map[col_b].numeric_profile
                 if not prof_a or not prof_b:
                     continue
-                # Both medians must be non‑zero to avoid division by zero
                 if prof_a.median == 0 or prof_b.median == 0:
                     continue
-                # Avoid suggesting a ratio for highly correlated pairs
-                if (col_a, col_b) in highly_corr_pairs:
-                    continue
-                # Both columns should be positive (ratios make most sense then)
                 if prof_a.min <= 0 or prof_b.min <= 0:
-                    continue
+                    continue  # ratio only meaningful for positive values
+
+                base_confidence = 0.5
+                # Raise confidence if coefficients of variation are similar
+                if (
+                    prof_a.cv is not None and prof_b.cv is not None
+                    and not (np.isnan(prof_a.cv) or np.isnan(prof_b.cv))
+                    and abs(prof_a.cv - prof_b.cv) < 0.5
+                ):
+                    base_confidence = 0.65
+
                 stats = {
                     f"{col_a}_median": prof_a.median,
                     f"{col_b}_median": prof_b.median,
+                    f"{col_a}_cv": prof_a.cv,
+                    f"{col_b}_cv": prof_b.cv,
                 }
                 recs.append(
                     _make_recommendation(
                         action=f"Create ratio feature: {col_a} / {col_b} (or vice versa).",
-                        confidence=0.5,  # weak suggestion, data exploration step
+                        confidence=base_confidence,
                         reasons=[
                             f"Both columns are numeric with non‑zero medians and positive values, "
                             f"suggesting a possible relative measure."
+                            + (
+                                f" Similar CV ({prof_a.cv:.2f} vs {prof_b.cv:.2f}) strengthens the case."
+                                if base_confidence > 0.5 else ""
+                            )
                         ],
                         stats=stats,
                         alternatives=["Consider difference or product instead."],
@@ -157,31 +188,21 @@ class FeatureEngineering:
     def _suggest_interactions(self) -> List[Recommendation]:
         """Suggest interaction (product) features for pairs of numeric
         columns that are NOT highly correlated (orthogonal information)."""
-        recs = []
+        recs: List[Recommendation] = []
         numeric_cols = list(self.numeric_map.keys())
-        # Pairs that are already highly correlated (avoid)
-        highly_corr_set = {
-            (p.feature_a, p.feature_b)
-            for p in self.correlation_pairs
-        } | {
-            (p.feature_b, p.feature_a)
-            for p in self.correlation_pairs
-        }
 
         for i in range(len(numeric_cols)):
             for j in range(i + 1, len(numeric_cols)):
-                col_a = numeric_cols[i]
-                col_b = numeric_cols[j]
-                if (col_a, col_b) in highly_corr_set:
+                col_a, col_b = numeric_cols[i], numeric_cols[j]
+                if (col_a, col_b) in self._highly_corr_set:
                     continue
                 prof_a = self.numeric_map[col_a].numeric_profile
                 prof_b = self.numeric_map[col_b].numeric_profile
-                # Avoid interaction if either column is constant
                 if not prof_a or not prof_b:
                     continue
-                # Basic check: columns should have some variability (std > 0)
                 if prof_a.std == 0 or prof_b.std == 0:
-                    continue
+                    continue  # constant column, interaction useless
+
                 stats = {
                     f"{col_a}_std": prof_a.std,
                     f"{col_b}_std": prof_b.std,
@@ -207,13 +228,12 @@ class FeatureEngineering:
     def _suggest_binning(self) -> List[Recommendation]:
         """Suggest discretisation for numeric columns with high cardinality
         and strong skewness."""
-        recs = []
+        recs: List[Recommendation] = []
         for col, prof in self.numeric_map.items():
             num = prof.numeric_profile
             if not num:
                 continue
-            # High unique count (>= 100) and skewed
-            if num.unique_count < 100 or abs(num.skewness) < self.config.skewness_threshold:
+            if num.unique_count < 100 or abs(num.skewness) < self.skewness_threshold:
                 continue
             recs.append(
                 _make_recommendation(
@@ -236,10 +256,10 @@ class FeatureEngineering:
     def _suggest_power_transforms(self) -> List[Recommendation]:
         """Suggest adding log‑ or Yeo‑Johnson transformed versions of
         highly skewed numeric columns."""
-        recs = []
+        recs: List[Recommendation] = []
         for col, prof in self.numeric_map.items():
             num = prof.numeric_profile
-            if not num or abs(num.skewness) < self.config.skewness_threshold:
+            if not num or abs(num.skewness) < self.skewness_threshold:
                 continue
             if num.min > 0:
                 action = f"Create a log‑transformed feature for '{col}' (e.g., log1p)."
@@ -276,7 +296,7 @@ class FeatureEngineering:
         if self.df is None:
             return []
         dt_cols = self.df.select_dtypes(include=["datetime", "datetime64"]).columns
-        recs = []
+        recs: List[Recommendation] = []
         for col in dt_cols:
             recs.append(
                 _make_recommendation(
@@ -296,18 +316,18 @@ class FeatureEngineering:
     def _suggest_feature_crossing(self) -> List[Recommendation]:
         """Suggest combining two low‑cardinality categorical columns."""
         cat_cols = list(self.categorical_map.keys())
-        recs = []
-        max_card = self.config.max_unique_for_categorical_like  # reuse threshold for "low"
+        recs: List[Recommendation] = []
         for i in range(len(cat_cols)):
             for j in range(i + 1, len(cat_cols)):
-                col_a = cat_cols[i]
-                col_b = cat_cols[j]
+                col_a, col_b = cat_cols[i], cat_cols[j]
                 prof_a = self.categorical_map[col_a].categorical_profile
                 prof_b = self.categorical_map[col_b].categorical_profile
                 if not prof_a or not prof_b:
                     continue
-                # Only if both are low cardinality and product <= 50
-                if prof_a.unique_count > max_card or prof_b.unique_count > max_card:
+                if (
+                    prof_a.unique_count > self.max_unique_for_categorical_like
+                    or prof_b.unique_count > self.max_unique_for_categorical_like
+                ):
                     continue
                 if prof_a.unique_count * prof_b.unique_count > 50:
                     continue
