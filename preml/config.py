@@ -1,4 +1,4 @@
-"""Central configuration module for ml_toolkit.
+"""Central configuration module for preml.
 
 This module defines all tunable parameters, thresholds, and defaults
 used throughout the library. It is designed to be imported anywhere
@@ -12,7 +12,7 @@ from typing import Literal, Optional
 
 @dataclass
 class MLToolkitConfig:
-    """Immutable configuration container for ml_toolkit.
+    """Immutable configuration container for preml.
 
     All parameters have sensible defaults, but can be overridden
     by creating a new instance or modifying attributes directly.

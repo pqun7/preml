@@ -1,9 +1,9 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-# ML Toolkit
+# PreML
 
-ML Toolkit is a modular Python library for exploratory data analysis, statistical recommendations, preprocessing pipeline generation, and feature engineering guidance for tabular datasets.
+PreML is a modular Python library for exploratory data analysis, statistical recommendations, preprocessing pipeline generation, and feature engineering guidance for tabular datasets.
 
-The source code now lives inside the `ml_toolkit/` package directory, which keeps the project organized and matches the installed namespace.
+The source code now lives inside the `preml/` package directory, which keeps the project organized and matches the installed namespace.
 
 ## What This Project Does
 
@@ -19,16 +19,16 @@ Use this map to understand how the current files fit together:
 
 | File | Purpose |
 | --- | --- |
-| [ml_toolkit/__init__.py](ml_toolkit/__init__.py) | Package exports and top-level public API. |
-| [ml_toolkit/config.py](ml_toolkit/config.py) | Central thresholds and defaults via `MLToolkitConfig`. |
-| [ml_toolkit/statistics_engine.py](ml_toolkit/statistics_engine.py) | Computes dataset facts such as profiles, missingness, outliers, and correlations. |
-| [ml_toolkit/recommendation_engine.py](ml_toolkit/recommendation_engine.py) | Converts statistics into recommendations and model guidance. |
-| [ml_toolkit/eda.py](ml_toolkit/eda.py) | Orchestrates the full EDA flow and produces summaries. |
-| [ml_toolkit/preprocessing.py](ml_toolkit/preprocessing.py) | Builds scikit-learn preprocessing pipelines from EDA results. |
-| [ml_toolkit/feature_engineering.py](ml_toolkit/feature_engineering.py) | Proposes new features from statistical evidence. |
-| [ml_toolkit/visualization.py](ml_toolkit/visualization.py) | Plotting and visual analysis helpers. |
-| [ml_toolkit/schema.py](ml_toolkit/schema.py) | Shared dataclasses used across the library. |
-| [ml_toolkit/exceptions.py](ml_toolkit/exceptions.py) | Custom exception hierarchy. |
+| [preml/__init__.py](preml/__init__.py) | Package exports and top-level public API. |
+| [preml/config.py](preml/config.py) | Central thresholds and defaults via `MLToolkitConfig`. |
+| [preml/statistics_engine.py](preml/statistics_engine.py) | Computes dataset facts such as profiles, missingness, outliers, and correlations. |
+| [preml/recommendation_engine.py](preml/recommendation_engine.py) | Converts statistics into recommendations and model guidance. |
+| [preml/eda.py](preml/eda.py) | Orchestrates the full EDA flow and produces summaries. |
+| [preml/preprocessing.py](preml/preprocessing.py) | Builds scikit-learn preprocessing pipelines from EDA results. |
+| [preml/feature_engineering.py](preml/feature_engineering.py) | Proposes new features from statistical evidence. |
+| [preml/visualization.py](preml/visualization.py) | Plotting and visual analysis helpers. |
+| [preml/schema.py](preml/schema.py) | Shared dataclasses used across the library. |
+| [preml/exceptions.py](preml/exceptions.py) | Custom exception hierarchy. |
 | [requirements.txt](requirements.txt) | Runtime dependencies for local installs. |
 | [pyproject.toml](pyproject.toml) | Build metadata and packaging configuration. |
 | [.gitignore](.gitignore) | Ignores caches, build artifacts, notebooks, and local environments. |
@@ -47,8 +47,8 @@ Use this map to understand how the current files fit together:
 ### From source
 
 ```bash
-git clone https://github.com/alinazer30/ml-toolkit.git
-cd ml-toolkit
+git clone https://github.com/alinazer30/preml.git
+cd preml
 python -m pip install -e .
 ```
 
@@ -68,8 +68,8 @@ The project targets Python 3.9+ and uses:
 ```python
 import pandas as pd
 
-from ml_toolkit.eda import EDAAnalyzer, quick_eda
-from ml_toolkit.preprocessing import PreprocessingBuilder
+from preml.eda import EDAAnalyzer, quick_eda
+from preml.preprocessing import PreprocessingBuilder
 
 df = pd.read_csv("your_dataset.csv")
 
@@ -99,26 +99,26 @@ X = builder.fit_transform(df)
 The package exposes the most common shared types at the package root:
 
 ```python
-from ml_toolkit import MLToolkitConfig, default_config
-from ml_toolkit import DataValidationError, RecommendationError
-from ml_toolkit import FeatureProfile, Recommendation, TargetProfile
+from preml import MLToolkitConfig, default_config
+from preml import DataValidationError, RecommendationError
+from preml import FeatureProfile, Recommendation, TargetProfile
 ```
 
 Useful module entry points:
 
-- `ml_toolkit.eda.EDAAnalyzer`
-- `ml_toolkit.eda.quick_eda`
-- `ml_toolkit.preprocessing.PreprocessingBuilder`
-- `ml_toolkit.recommendation_engine.RecommendationEngine`
-- `ml_toolkit.statistics_engine.StatisticsEngine`
+- `preml.eda.EDAAnalyzer`
+- `preml.eda.quick_eda`
+- `preml.preprocessing.PreprocessingBuilder`
+- `preml.recommendation_engine.RecommendationEngine`
+- `preml.statistics_engine.StatisticsEngine`
 
 ## Configuration
 
 All thresholds and defaults are defined in `MLToolkitConfig`.
 
 ```python
-from ml_toolkit.config import MLToolkitConfig
-from ml_toolkit.eda import EDAAnalyzer
+from preml.config import MLToolkitConfig
+from preml.eda import EDAAnalyzer
 
 config = MLToolkitConfig(
     missing_threshold=0.2,
@@ -147,11 +147,11 @@ Recommended commands to publish the project cleanly:
 
 ```bash
 git init
-git add README.md pyproject.toml requirements.txt .gitignore ml_toolkit/ tests/
+git add README.md pyproject.toml requirements.txt .gitignore preml/ tests/
 git status
 git commit -m "Prepare packaged ML toolkit"
 git branch -M main
-git remote add origin https://github.com/<your-username>/ml-toolkit.git
+git remote add origin https://github.com/<your-username>/preml.git
 git push -u origin main
 ```
 
@@ -174,7 +174,7 @@ pytest tests/
 If you want to sanity-check the edited modules locally, you can also run:
 
 ```bash
-python -m py_compile ml_toolkit/preprocessing.py ml_toolkit/eda.py ml_toolkit/recommendation_engine.py
+python -m py_compile preml/preprocessing.py preml/eda.py preml/recommendation_engine.py
 ```
 
 ## Contributing

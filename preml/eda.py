@@ -14,11 +14,11 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict, cast
 
 import pandas as pd
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import DataValidationError
-from ml_toolkit.recommendation_engine import RecommendationEngine
-from ml_toolkit.recommendation_utils import normalize_recommendation_items
-from ml_toolkit.statistics_engine import StatisticsEngine
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import DataValidationError
+from preml.recommendation_engine import RecommendationEngine
+from preml.recommendation_utils import normalize_recommendation_items
+from preml.statistics_engine import StatisticsEngine
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ class EDAAnalyzer:
         """Return a plain‑text summary of the dataset and major findings.
 
         This is a lightweight textual overview; for full reports use
-        `ml_toolkit.report`.
+        `preml.report`.
         """
         if self._analysis_result is None:
             logger.debug("Running analysis because no cached result exists.")

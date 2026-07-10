@@ -1,5 +1,5 @@
 """
-Unit tests for ml_toolkit.preprocessing.
+Unit tests for preml.preprocessing.
 
 Tests cover:
 - PreprocessingBuilder pipeline creation
@@ -16,10 +16,10 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer, RobustScaler
 
-from ml_toolkit.config import MLToolkitConfig
-from ml_toolkit.exceptions import PreprocessingError
-from ml_toolkit.preprocessing import PreprocessingBuilder
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig
+from preml.exceptions import PreprocessingError
+from preml.preprocessing import PreprocessingBuilder
+from preml.schema import (
     FeatureProfile,
     NumericDistributionProfile,
     CategoricalProfile,

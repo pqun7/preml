@@ -1,4 +1,4 @@
-"""Data models (dataclasses) for ml_toolkit.
+"""Data models (dataclasses) for preml.
 
 All classes in this module are pure data containers. They hold facts,
 never compute them. This strict separation allows the statistics engine,

@@ -15,8 +15,8 @@ from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.schema import (
     FeatureProfile,
     Recommendation,
     Evidence,

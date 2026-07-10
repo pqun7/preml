@@ -26,9 +26,9 @@ from sklearn.preprocessing import (
     StandardScaler,
 )
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import PreprocessingError
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import PreprocessingError
+from preml.schema import (
     FeatureProfile,
     Recommendation,
     TargetProfile,

@@ -4,7 +4,7 @@ making any decisions or recommendations.
 
 All functions and methods in this module are purely computational.
 They accept a DataFrame and configuration, and return dataclass
-instances from `ml_toolkit.schema`. No side effects, no global state.
+instances from `preml.schema`. No side effects, no global state.
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats as sp_stats
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import DataValidationError
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import DataValidationError
+from preml.schema import (
     CategoricalProfile,
     CorrelationPair,
     DatasetMetadata,

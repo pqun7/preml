@@ -1,5 +1,5 @@
 """
-Custom exception classes for ml_toolkit.
+Custom exception classes for preml.
 
 All exceptions inherit from MLToolkitError, so users can catch a single
 base exception if needed. Each exception conveys clear, actionable error
@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 
 class MLToolkitError(Exception):
-    """Base exception for all ml_toolkit errors.
+    """Base exception for all preml errors.
 
     Parameters
     ----------

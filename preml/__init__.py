@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 # See the LICENSE file in the project root for license information.
 """
-ml_toolkit — A professional machine learning toolkit for EDA,
+preml — A professional machine learning toolkit for EDA,
 preprocessing, feature engineering, and modeling.
 
 The package is organized into clearly separated modules, each
@@ -25,8 +25,8 @@ __version__ = "0.1.0"
 __author__ = "Your Name <your.email@example.com>"
 
 # Expose the most commonly used classes at package level
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import (
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import (
     MLToolkitError,
     DataValidationError,
     StatisticsError,
@@ -37,7 +37,7 @@ from ml_toolkit.exceptions import (
     ReportError,
     VisualizationError,
 )
-from ml_toolkit.schema import (
+from preml.schema import (
     DatasetMetadata,
     DuplicateReport,
     InfiniteReport,

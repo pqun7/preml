@@ -1,5 +1,5 @@
 """
-Unit tests for ml_toolkit.eda (EDAAnalyzer and quick_eda).
+Unit tests for preml.eda (EDAAnalyzer and quick_eda).
 
 Tests cover:
 - Proper orchestration of engines
@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ml_toolkit.config import MLToolkitConfig
-from ml_toolkit.eda import EDAAnalyzer, quick_eda
-from ml_toolkit.exceptions import DataValidationError
+from preml.config import MLToolkitConfig
+from preml.eda import EDAAnalyzer, quick_eda
+from preml.exceptions import DataValidationError
 
 
 @pytest.fixture

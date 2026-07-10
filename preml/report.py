@@ -6,7 +6,7 @@ Reports include an executive summary, statistical details, data quality
 assessment, actionable preprocessing and model recommendations, and optional
 embedded visualizations with explanatory captions. The module never
 recomputes statistics; it builds upon the analysis dictionary produced by
-:class:`ml_toolkit.eda.EDAAnalyzer`.
+:class:`preml.eda.EDAAnalyzer`.
 """
 
 from __future__ import annotations
@@ -19,16 +19,16 @@ import matplotlib.figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import ReportError
-from ml_toolkit.recommendation_utils import normalize_recommendation_items
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import ReportError
+from preml.recommendation_utils import normalize_recommendation_items
+from preml.schema import (
     FeatureProfile,
     CorrelationPair,
     OutlierReport,
     TargetProfile,
 )
-from ml_toolkit.visualization import (
+from preml.visualization import (
     explain_visualizations,
     plot_correlation_heatmap,
     plot_missing_heatmap,
@@ -83,7 +83,7 @@ class ReportGenerator:
     """Generates formatted EDA reports with actionable insights.
 
     The generator consumes the complete analysis dictionary produced by
-    :meth:`EDAAnalyzer.run() <ml_toolkit.eda.EDAAnalyzer.run>` and
+    :meth:`EDAAnalyzer.run() <preml.eda.EDAAnalyzer.run>` and
     optionally the original DataFrame for embedded plots.
 
     Parameters
@@ -134,7 +134,7 @@ class ReportGenerator:
             return
         if not self.recommendations:
             try:
-                from ml_toolkit.recommendation_engine import RecommendationEngine
+                from preml.recommendation_engine import RecommendationEngine
                 engine = RecommendationEngine(config=self.config, enable_feature_engineering=False)
                 self.recommendations = engine.generate_recommendations(self.analysis)
             except Exception:
@@ -323,7 +323,7 @@ class ReportGenerator:
         if self.recommendations:
             lines.append("[Recommendations Summary]")
             try:
-                from ml_toolkit.recommendation_engine import RecommendationEngine
+                from preml.recommendation_engine import RecommendationEngine
                 summary_text = RecommendationEngine.summarize(self.recommendations)
                 lines.append(summary_text)
             except Exception:
@@ -360,7 +360,7 @@ class ReportGenerator:
         """
         self._ensure_recommendations()
         md = []
-        md.append("# ML Toolkit – EDA Report\n")
+        md.append("# PreML – EDA Report\n")
 
         # Key Findings
         findings = self._key_findings()
@@ -440,7 +440,7 @@ class ReportGenerator:
         if self.recommendations:
             md.append("## Recommendations\n")
             try:
-                from ml_toolkit.recommendation_engine import RecommendationEngine
+                from preml.recommendation_engine import RecommendationEngine
                 summary = RecommendationEngine.summarize(self.recommendations)
                 # Convert the plain-text summary to markdown (basic)
                 summary = summary.replace("=" * 60, "---\n")
@@ -497,7 +497,7 @@ class ReportGenerator:
         html_parts.append(f"<style>{_REPORT_CSS}</style></head><body>")
 
         # Title & Quality Score
-        html_parts.append("<h1>ML Toolkit – EDA Report</h1>")
+        html_parts.append("<h1>PreML – EDA Report</h1>")
         score_class = "good" if self.quality_score >= 70 else "moderate" if self.quality_score >= 40 else "warning"
         html_parts.append(
             f"<p>Data Quality Score: <span class='quality-score {score_class}'>{self.quality_score:.1f}</span>/100</p>"
@@ -572,7 +572,7 @@ class ReportGenerator:
         if self.recommendations:
             html_parts.append("<h2>Recommendations</h2>")
             try:
-                from ml_toolkit.recommendation_engine import RecommendationEngine
+                from preml.recommendation_engine import RecommendationEngine
                 summary_txt = RecommendationEngine.summarize(self.recommendations)
                 # Convert plain text to HTML with monospace pre block
                 html_parts.append("<pre>" + summary_txt + "</pre>")

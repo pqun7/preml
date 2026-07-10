@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, List
 
-from ml_toolkit.schema import Recommendation
+from preml.schema import Recommendation
 
 
 def normalize_recommendation_items(items: Any) -> List[Recommendation]:

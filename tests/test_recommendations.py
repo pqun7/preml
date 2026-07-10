@@ -1,5 +1,5 @@
 """
-Comprehensive unit tests for ml_toolkit.recommendation_engine.
+Comprehensive unit tests for preml.recommendation_engine.
 
 Updated to cover:
 - Input validation with clear error messages.
@@ -18,10 +18,10 @@ import pandas as pd
 import numpy as np
 from unittest.mock import patch
 
-from ml_toolkit.config import MLToolkitConfig
-from ml_toolkit.recommendation_engine import RecommendationEngine
-from ml_toolkit.exceptions import RecommendationError
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig
+from preml.recommendation_engine import RecommendationEngine
+from preml.exceptions import RecommendationError
+from preml.schema import (
     DatasetMetadata,
     DuplicateReport,
     InfiniteReport,
@@ -478,7 +478,7 @@ class TestModelRecommendations:
         assert "HistGradientBoostingRegressor" in model_names
 
     def test_xgboost_included_if_available(self, engine, target_profile_binary, dummy_feature_profiles):
-        import ml_toolkit.recommendation_engine as rec_mod
+        import preml.recommendation_engine as rec_mod
         with patch.object(rec_mod, 'XGBOOST_AVAILABLE', True):
             recs = engine._model_recommendations(
                 target_profile=target_profile_binary,
@@ -491,7 +491,7 @@ class TestModelRecommendations:
             assert any("XGB" in m.model_name for m in recs)
 
     def test_lightgbm_included_if_available(self, engine, target_profile_regression, dummy_feature_profiles):
-        import ml_toolkit.recommendation_engine as rec_mod
+        import preml.recommendation_engine as rec_mod
         with patch.object(rec_mod, 'LIGHTGBM_AVAILABLE', True):
             recs = engine._model_recommendations(
                 target_profile=target_profile_regression,

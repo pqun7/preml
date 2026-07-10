@@ -3,7 +3,7 @@ Decision layer — interprets statistical facts and produces
 evidence‑based recommendations.
 
 This module reads facts (dataclass instances from
-ml_toolkit.statistics_engine) and outputs Recommendations,
+preml.statistics_engine) and outputs Recommendations,
 PipelineSuggestions, and ModelRecommendations.  No computation of
 statistics happens here; all decisions are derived from the supplied
 evidence.
@@ -24,9 +24,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import RecommendationError
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import RecommendationError
+from preml.schema import (
     CategoricalProfile,
     CorrelationPair,
     DatasetMetadata,

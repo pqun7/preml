@@ -1,5 +1,5 @@
 """
-Unit tests for ml_toolkit.statistics_engine.
+Unit tests for preml.statistics_engine.
 
 Tests cover:
 - Metadata computation
@@ -16,9 +16,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ml_toolkit.config import MLToolkitConfig
-from ml_toolkit.exceptions import DataValidationError
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig
+from preml.exceptions import DataValidationError
+from preml.schema import (
     CategoricalProfile,
     CorrelationPair,
     DatasetMetadata,
@@ -30,7 +30,7 @@ from ml_toolkit.schema import (
     OutlierReport,
     TargetProfile,
 )
-from ml_toolkit.statistics_engine import StatisticsEngine
+from preml.statistics_engine import StatisticsEngine
 
 
 # ------------------- Fixtures -------------------

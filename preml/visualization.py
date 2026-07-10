@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.schema import (
+from preml.config import MLToolkitConfig, default_config
+from preml.schema import (
     CorrelationPair,
     FeatureProfile,
     OutlierReport,
@@ -539,7 +539,7 @@ def explain_visualizations(
     # ------------------------------------------------------------------
     if recommendations is None:
         # Local import to avoid circular dependency at module level
-        from ml_toolkit.recommendation_engine import RecommendationEngine
+        from preml.recommendation_engine import RecommendationEngine
 
         engine = RecommendationEngine(config=config, enable_feature_engineering=False)
         recommendations = engine.generate_recommendations(analysis_result)

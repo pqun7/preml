@@ -9,7 +9,7 @@ This module provides production‑ready utilities for:
 
 All computations use the existing configuration for reproducibility and
 never recompute statistics or recommendations on their own. The module
-depends only on the official public APIs of `ml_toolkit` (config, schema,
+depends only on the official public APIs of `preml` (config, schema,
 exceptions) and scikit‑learn.
 """
 
@@ -35,9 +35,9 @@ from sklearn.metrics import (
 from sklearn.model_selection import cross_validate as sk_cross_validate
 from sklearn.pipeline import Pipeline
 
-from ml_toolkit.config import MLToolkitConfig, default_config
-from ml_toolkit.exceptions import ModelError
-from ml_toolkit.schema import ModelRecommendation, TargetProfile
+from preml.config import MLToolkitConfig, default_config
+from preml.exceptions import ModelError
+from preml.schema import ModelRecommendation, TargetProfile
 
 # ---------------------------------------------------------------------------
 # Private helpers
@@ -182,7 +182,7 @@ class BaselineTrainer:
     """Trains and evaluates simple baseline models.
 
     The trainer uses an already‑built ``ColumnTransformer`` (the output
-    of :class:`~ml_toolkit.preprocessing.PreprocessingBuilder`) and a
+    of :class:`~preml.preprocessing.PreprocessingBuilder`) and a
     target profile to create a full machine‑learning pipeline. It can
     either accept an explicit estimator or infer sensible defaults from
     the task type.
@@ -270,7 +270,7 @@ class BaselineTrainer:
         preprocessing_pipeline : ColumnTransformer
             The preprocessing pipeline returned by
             :meth:`PreprocessingBuilder.build_pipeline()
-            <ml_toolkit.preprocessing.PreprocessingBuilder.build_pipeline>`.
+            <preml.preprocessing.PreprocessingBuilder.build_pipeline>`.
         task_type : str
             One of ``'regression'``, ``'classification'``,
             ``'binary_classification'``, ``'multiclass_classification'``.
@@ -380,7 +380,7 @@ class BaselineTrainer:
         ----------
         analysis_result : dict
             The full output of :meth:`EDAAnalyzer.run()
-            <ml_toolkit.eda.EDAAnalyzer.run>`.
+            <preml.eda.EDAAnalyzer.run>`.
         df : pd.DataFrame
             Original DataFrame containing the feature columns and the
             target column.
@@ -389,7 +389,7 @@ class BaselineTrainer:
         preprocessing_pipeline : ColumnTransformer
             Preprocessing pipeline (without estimator) as returned by
             :meth:`PreprocessingBuilder.build_pipeline()
-            <ml_toolkit.preprocessing.PreprocessingBuilder.build_pipeline>`.
+            <preml.preprocessing.PreprocessingBuilder.build_pipeline>`.
         cv : int, default 5
             Number of cross‑validation folds.
 
