@@ -54,6 +54,8 @@ class RecommendationEngine:
     ) -> None:
         self.config = config or default_config
         self.enable_feature_engineering = enable_feature_engineering
+        self._outlier_columns: List[str] = []   
+
 
     # ------------------------------------------------------------------
     # Helper: build a Recommendation
@@ -90,27 +92,25 @@ class RecommendationEngine:
         missing_report: MissingReport,
         outlier_columns: Optional[List[str]] = None,
     ) -> List[Recommendation]:
-        """Suggest imputation strategies per column with missing values."""
-        recs = []
+        """Suggest imputation strategies per column with missing values.
+
+        High‑missing columns are flagged for investigation regardless of
+        whether a FeatureProfile is available. Others use the profile to
+        choose between mean, median, or mode imputation.
+        """
+        recs: List[Recommendation] = []
         if not missing_report.columns_with_missing:
             return recs
 
-        if outlier_columns is None:
-            outlier_columns = getattr(self, "_outlier_columns", [])
-
-        # Map column to profile for quick lookup
         profile_map = {p.column: p for p in feature_profiles}
+        self._outlier_columns = outlier_columns or []
 
         for col_report in missing_report.column_reports:
             col = col_report.column
-            profile = profile_map.get(col)
-            if profile is None:
-                continue
-
             miss_pct = col_report.missing_percent
-            stats = {"missing_percent": miss_pct}
+            stats: Dict[str, Any] = {"missing_percent": miss_pct}
 
-            # High missingness → suggest investigation
+            # 1. High missing ratio → investigate (no profile needed)
             if miss_pct > self.config.missing_threshold * 100:
                 recs.append(
                     self._make_recommendation(
@@ -129,12 +129,15 @@ class RecommendationEngine:
                         ],
                     )
                 )
-                continue  # high missing needs special handling
+                continue  # no need to check the profile further
 
-            # If numeric
+            # 2. Lower missing ratio → rely on column profile
+            profile = profile_map.get(col)
+            if profile is None:
+                continue
+
             if profile.numeric_profile:
-                num = profile.numeric_profile
-                has_outliers = col in outlier_columns
+                has_outliers = col in self._outlier_columns  # safe now
                 if has_outliers:
                     action = "Use median imputation (outliers present)."
                     reasons = ["Outliers detected; median is robust."]
@@ -299,8 +302,9 @@ class RecommendationEngine:
                     action = "Binary encoding or keep as 0/1."
                     confidence = 0.95
                 elif cat.unique_count <= 10:
-                    action = "One‑Hot Encoding (low cardinality)."
+                    action = "One-Hot Encoding (low cardinality)."   # plain ASCII hyphen
                     confidence = 0.9
+                    
                 else:
                     action = (
                         f"High cardinality ({cat.unique_count} categories). "
@@ -544,6 +548,10 @@ class RecommendationEngine:
         duplicates = analysis_results.get("duplicates")
         infinite = analysis_results.get("infinite")
         missing = analysis_results.get("missing")
+        # Ensure we pass a MissingReport to imputation recommendations
+        if missing is None:
+            # type: ignore[arg-type]
+            missing = MissingReport(columns_with_missing=[], column_reports=[], total_missing=0)
         outlier_reports = analysis_results.get("outliers", [])
         feature_profiles = analysis_results.get("feature_profiles", [])
         correlation_pairs = analysis_results.get("correlation_pairs", [])
