@@ -1,5 +1,11 @@
 # PreML Usage Guide
 
+## PreML
+
+> **PreML** is a production-ready Python library for automating the most repetitive stages of tabular machine learning workflows. It performs exploratory data analysis (EDA), statistical profiling, preprocessing pipeline generation, feature engineering recommendations, baseline model evaluation, visualization, and professional report generation—all while remaining transparent, configurable, and fully compatible with the Scikit-learn ecosystem.
+>
+> Unlike many automated machine learning tools, **PreML** does not rely on opaque heuristics. Every recommendation is derived from statistical evidence, enabling reproducible, explainable, and trustworthy machine learning workflows.
+
 PreML is an evidence-driven library for tabular ML workflows. It separates:
 
 1. Statistical fact extraction
@@ -12,21 +18,44 @@ This guide is the authoritative reference for the current implementation.
 
 ## Contents
 
-- Philosophy and Design Goals
-- Installation and Compatibility
-- Architecture and Data Flow
-- Which Component Should I Use?
-- Quick Start
-- Core Workflow (End-to-End)
-- API Reference
-- Configuration Reference
-- Error Handling and Troubleshooting
-- FAQ
-- Best Practices
-- Performance and Scalability Guidance
-- Pipeline Persistence
-- sklearn Integration Notes
-- Migration Notes
+- [Philosophy and Design Goals](#philosophy-and-design-goals)
+- [Installation and Compatibility](#installation-and-compatibility)
+- [Architecture and Data Flow](#architecture-and-data-flow)
+- [Which Component Should I Use?](#which-component-should-i-use)
+- [Quick Start](#quick-start)
+- [Core Workflow (End-to-End)](#core-workflow-end-to-end)
+- [API Reference](#api-reference)
+    - [preml.eda](#preml-eda)
+    - [preml.statistics_engine](#preml-statistics-engine)
+    - [preml.recommendation_engine](#preml-recommendation-engine)
+    - [preml.preprocessing](#preml-preprocessing)
+    - [preml.feature_engineering](#preml-feature-engineering)
+    - [preml.model_utils](#preml-model-utils)
+    - [preml.visualization](#preml-visualization)
+    - [preml.report](#preml-report)
+- [Configuration Reference](#configuration-reference)
+- [Typical Workflows](#typical-workflows)
+- [Error Handling and Troubleshooting](#error-handling-and-troubleshooting)
+- [FAQ](#faq)
+- [Best Practices](#best-practices)
+- [Performance and Scalability Guidance](#performance-and-scalability-guidance)
+- [Pipeline Persistence](#pipeline-persistence)
+- [sklearn Integration Notes](#sklearn-integration-notes)
+- [Migration Notes](#migration-notes)
+- [Detailed Component Guides](#detailed-component-guides)
+    - [EDAAnalyzer](#edaanalyzer)
+    - [StatisticsEngine](#statisticsengine)
+    - [RecommendationEngine](#recommendationengine)
+    - [Visualization](#visualization)
+    - [PreprocessingBuilder](#preprocessingbuilder)
+    - [FeatureEngineering](#featureengineering)
+    - [BaselineTrainer](#baselinetrainer)
+    - [ReportGenerator](#reportgenerator)
+- [End-to-End Workflow](#end-to-end-workflow)
+- [Performance](#performance)
+- [Thread Safety](#thread-safety)
+- [Reproducibility](#reproducibility)
+- [License](#license)
 
 ## Philosophy and Design Goals
 
@@ -171,6 +200,7 @@ for row in results:
 
 ## API Reference
 
+<a id="preml-eda"></a>
 ### `preml.eda`
 
 #### `EDAAnalyzer(df, target=None, config=None, enable_feature_engineering=True)`
@@ -198,6 +228,7 @@ Return keys from `run()`:
 
 Convenience wrapper around `EDAAnalyzer(...).run()`.
 
+<a id="preml-statistics-engine"></a>
 ### `preml.statistics_engine`
 
 #### `StatisticsEngine(df, target=None, config=None)`
@@ -218,6 +249,7 @@ Behavior note:
 
 - If `target` is provided, the target column is excluded from `feature_profiles`.
 
+<a id="preml-recommendation-engine"></a>
 ### `preml.recommendation_engine`
 
 #### `RecommendationEngine(config=None, knowledge_db_path="knowledge.db", random_state=None, enable_meta_learning=True, enable_feature_engineering=None)`
@@ -235,6 +267,7 @@ For empirical selection, pass the raw feature matrix and target vector to `fit()
 For descriptive recommendations, pass the analysis dictionary returned by
 `EDAAnalyzer.run()` or `quick_eda()` to `generate_recommendations()`.
 
+<a id="preml-preprocessing"></a>
 ### `preml.preprocessing`
 
 #### `PreprocessingBuilder(analysis_result, config=None)`
@@ -253,6 +286,7 @@ Important rules:
 - Pass feature DataFrames only (exclude target column).
 - `transform` requires prior `fit` or `fit_transform`.
 
+<a id="preml-feature-engineering"></a>
 ### `preml.feature_engineering`
 
 #### `FeatureEngineering(analysis_result, df=None, config=None)`
@@ -261,6 +295,7 @@ Important rules:
 
 Suggestion categories include ratio, interaction, binning, power transform, datetime extraction, and categorical crossing where statistically justified.
 
+<a id="preml-model-utils"></a>
 ### `preml.model_utils`
 
 #### `compute_metrics(y_true, y_pred, task_type, extra_metrics=None)`
@@ -286,6 +321,7 @@ Methods:
 - `std_scores`
 - `pipeline`
 
+<a id="preml-visualization"></a>
 ### `preml.visualization`
 
 Key plotting APIs:
@@ -299,6 +335,7 @@ Key plotting APIs:
 - `plot_target_correlations(...)`
 - `explain_visualizations(...)`
 
+<a id="preml-report"></a>
 ### `preml.report`
 
 #### `ReportGenerator(analysis_result, df=None, config=None)`
@@ -549,6 +586,8 @@ Statistics   Recommendations   Data Quality
 ```
 
 ---
+
+## Detailed Component Guides
 
 # EDAAnalyzer
 
