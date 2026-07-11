@@ -988,8 +988,12 @@ class RecommendationEngine(BaseEstimator):
             Sorted by cv_score descending.
         """
         start = time.time()
-        screening_budget = time_budget * 0.3
-        deep_budget = time_budget - screening_budget
+        # Keep the screening stage large enough to avoid premature timeout
+        # on moderately sized examples, while still reserving time for the
+        # deeper evaluation phase.
+        screening_budget = max(time_budget * 0.45, 30.0)
+        screening_budget = min(screening_budget, time_budget * 0.65)
+        deep_budget = max(time_budget - screening_budget, time_budget * 0.2)
 
         # Phase 1: Screening on a smaller sample
         X_sample, _, y_sample, _ = train_test_split(
@@ -1707,8 +1711,11 @@ class RecommendationEngine(BaseEstimator):
         time_budget_seconds : float, default=120
             Total time budget for the entire process.
         progress_callback : callable, optional
-            If provided, called after each major step with a status dict, e.g.
-            ``{"step": "meta_features_extracted", "meta": {...}}``.
+            If provided, called after each major step with the signature
+            ``progress_callback(step: str, payload: dict)``. The callback is
+            invoked at start, after each major phase, and when the run finishes.
+            For backward compatibility, single-argument callbacks that accept a
+            status dictionary are also supported.
 
         Returns
         -------
@@ -1754,14 +1761,14 @@ class RecommendationEngine(BaseEstimator):
         # 4. Allocate time budget adaptively
         n_samples = self._meta_features["n_samples"]
         if n_samples < 5000:
-            # Small dataset → more time for SH/BO
-            screening_budget = time_budget_seconds * 0.2
-            deep_budget = time_budget_seconds * 0.2
-            hyper_budget = time_budget_seconds * 0.5
+            # Small dataset → more time for screening and deep evaluation.
+            screening_budget = max(time_budget_seconds * 0.35, 30.0)
+            deep_budget = max(time_budget_seconds * 0.25, 20.0)
+            hyper_budget = max(time_budget_seconds - screening_budget - deep_budget, 0.0)
         else:
-            screening_budget = time_budget_seconds * 0.3
-            deep_budget = time_budget_seconds * 0.3
-            hyper_budget = time_budget_seconds * 0.3
+            screening_budget = max(time_budget_seconds * 0.35, 30.0)
+            deep_budget = max(time_budget_seconds * 0.25, 20.0)
+            hyper_budget = max(time_budget_seconds - screening_budget - deep_budget, 0.0)
 
         # 4a. ESCV
         escv_results = self._fast_cv_selector(

@@ -21,7 +21,7 @@ responsible for a single domain concern:
 - report          : Generates reports in various formats.
 """
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __author__ = "Ali Nazer <alinazer30@gmail.com>"
 
 # Expose the most commonly used classes and convenience functions

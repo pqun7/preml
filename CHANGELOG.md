@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.8] - 2026-07-11
+
+### Added
+
+- Added a dedicated executable test suite for validating Usage Guide examples end to end.
+- Added a small Usage Guide test README with commands for running the validator-focused tests.
+
+### Changed
+
+- Clarified Usage Guide guidance for `RecommendationEngine.fit()` and documented `ValidationTimeoutError` handling.
+- Added fallback behavior to the empirical model-selection example so it remains copy-paste runnable when the time budget is exceeded.
+- Adjusted recommendation-engine timeout budgeting to avoid premature screening timeouts on documented examples.
+
+### Fixed
+
+- Replaced hidden file-based sample data in Usage Guide examples with inline synthetic data.
+- Corrected Usage Guide field names for feature profiles and correlation pairs.
+- Corrected Usage Guide evaluation output key usage to `cv_scores`.
+
+## [0.1.7] - 2026-07-11
+
+### Changed
+
+- Aligned runtime package version metadata with the published `pyproject.toml` version.
+- Clarified the `RecommendationEngine.fit(..., progress_callback=...)` callback contract in the public API docs.
+
 ## [0.1.6] - 2026-07-11
 
 ### Changed

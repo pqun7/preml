@@ -109,6 +109,35 @@ def test_fit_timeout_raises(monkeypatch, mixed_dataset):
         engine.fit(X, y_reg, time_budget_seconds=0.0)
 
 
+def test_fit_emits_progress_callback_events(monkeypatch, mixed_dataset):
+    X, y_reg, _ = mixed_dataset
+    engine = RecommendationEngine(random_state=42)
+    candidate = ModelCandidate(
+        name="HistGradientBoostingRegressor",
+        estimator_class=HistGradientBoostingRegressor,
+        priority=1.0,
+        hyperparams={"random_state": 42},
+        supports_categorical=True,
+        supports_missing=True,
+        needs_scaling=False,
+    )
+    _patch_fast_fit(monkeypatch, engine, candidate)
+
+    events = []
+
+    def progress_callback(step, payload):
+        events.append((step, payload))
+
+    result = engine.fit(X, y_reg, time_budget_seconds=5.0, progress_callback=progress_callback)
+
+    assert result["best_model"] == candidate.name
+    assert events[0][0] == "start"
+    assert isinstance(events[0][1], dict)
+    assert any(step == "meta_features_extracted" for step, _ in events)
+    assert events[-1][0] == "finished"
+    assert isinstance(events[-1][1], dict)
+
+
 def test_knowledge_base_store_and_query(tmp_path):
     db_path = tmp_path / "knowledge.db"
     kb = KnowledgeBase(str(db_path))

@@ -18,44 +18,54 @@ This guide is the authoritative reference for the current implementation.
 
 ## Contents
 
-- [Philosophy and Design Goals](#philosophy-and-design-goals)
-- [Installation and Compatibility](#installation-and-compatibility)
-- [Architecture and Data Flow](#architecture-and-data-flow)
-- [Which Component Should I Use?](#which-component-should-i-use)
-- [Quick Start](#quick-start)
-- [Core Workflow (End-to-End)](#core-workflow-end-to-end)
-- [API Reference](#api-reference)
-    - [preml.eda](#preml-eda)
-    - [preml.statistics_engine](#preml-statistics-engine)
-    - [preml.recommendation_engine](#preml-recommendation-engine)
-    - [preml.preprocessing](#preml-preprocessing)
-    - [preml.feature_engineering](#preml-feature-engineering)
-    - [preml.model_utils](#preml-model-utils)
-    - [preml.visualization](#preml-visualization)
-    - [preml.report](#preml-report)
-- [Configuration Reference](#configuration-reference)
-- [Typical Workflows](#typical-workflows)
-- [Error Handling and Troubleshooting](#error-handling-and-troubleshooting)
-- [FAQ](#faq)
-- [Best Practices](#best-practices)
-- [Performance and Scalability Guidance](#performance-and-scalability-guidance)
-- [Pipeline Persistence](#pipeline-persistence)
-- [sklearn Integration Notes](#sklearn-integration-notes)
-- [Migration Notes](#migration-notes)
-- [Detailed Component Guides](#detailed-component-guides)
-    - [EDAAnalyzer](#edaanalyzer)
-    - [StatisticsEngine](#statisticsengine)
-    - [RecommendationEngine](#recommendationengine)
-    - [Visualization](#visualization)
-    - [PreprocessingBuilder](#preprocessingbuilder)
-    - [FeatureEngineering](#featureengineering)
-    - [BaselineTrainer](#baselinetrainer)
-    - [ReportGenerator](#reportgenerator)
-- [End-to-End Workflow](#end-to-end-workflow)
-- [Performance](#performance)
-- [Thread Safety](#thread-safety)
-- [Reproducibility](#reproducibility)
-- [License](#license)
+<ul>
+    <li><a href="#philosophy-and-design-goals">Philosophy and Design Goals</a></li>
+    <li><a href="#installation-and-compatibility">Installation and Compatibility</a></li>
+    <li><a href="#architecture-and-data-flow">Architecture and Data Flow</a></li>
+    <li><a href="#which-component-should-i-use">Which Component Should I Use?</a></li>
+    <li><a href="#quick-start">Quick Start</a></li>
+    <li><a href="#core-workflow-end-to-end">Core Workflow (End-to-End)</a></li>
+    <li>
+        <a href="#api-reference">API Reference</a>
+        <ul>
+            <li><a href="#preml-eda">preml.eda</a></li>
+            <li><a href="#preml-statistics-engine">preml.statistics_engine</a></li>
+            <li><a href="#preml-recommendation-engine">preml.recommendation_engine</a></li>
+            <li><a href="#preml-preprocessing">preml.preprocessing</a></li>
+            <li><a href="#preml-feature-engineering">preml.feature_engineering</a></li>
+            <li><a href="#preml-model-utils">preml.model_utils</a></li>
+            <li><a href="#preml-visualization">preml.visualization</a></li>
+            <li><a href="#preml-report">preml.report</a></li>
+        </ul>
+    </li>
+    <li><a href="#configuration-reference">Configuration Reference</a></li>
+    <li><a href="#typical-workflows">Typical Workflows</a></li>
+    <li><a href="#error-handling-and-troubleshooting">Error Handling and Troubleshooting</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#best-practices">Best Practices</a></li>
+    <li><a href="#performance-and-scalability-guidance">Performance and Scalability Guidance</a></li>
+    <li><a href="#pipeline-persistence">Pipeline Persistence</a></li>
+    <li><a href="#sklearn-integration-notes">sklearn Integration Notes</a></li>
+    <li><a href="#migration-notes">Migration Notes</a></li>
+    <li>
+        <a href="#detailed-component-guides">Detailed Component Guides</a>
+        <ul>
+            <li><a href="#edaanalyzer">EDAAnalyzer</a></li>
+            <li><a href="#statisticsengine">StatisticsEngine</a></li>
+            <li><a href="#recommendationengine">RecommendationEngine</a></li>
+            <li><a href="#visualization">Visualization</a></li>
+            <li><a href="#preprocessingbuilder">PreprocessingBuilder</a></li>
+            <li><a href="#featureengineering">FeatureEngineering</a></li>
+            <li><a href="#baselinetrainer">BaselineTrainer</a></li>
+            <li><a href="#reportgenerator">ReportGenerator</a></li>
+        </ul>
+    </li>
+    <li><a href="#end-to-end-workflow">End-to-End Workflow</a></li>
+    <li><a href="#performance">Performance</a></li>
+    <li><a href="#thread-safety">Thread Safety</a></li>
+    <li><a href="#reproducibility">Reproducibility</a></li>
+    <li><a href="#license">License</a></li>
+</ul>
 
 ## Philosophy and Design Goals
 
@@ -129,6 +139,7 @@ Use this decision tree:
     - Use `StatisticsEngine(df, target=...).run_full_analysis()`
 4. I need empirical model selection from raw tabular features:
     - Use `RecommendationEngine(...).fit(X, y)`
+    - Catch `ValidationTimeoutError` if the time budget is exceeded.
 5. I need recommendations from existing stats:
     - Use `RecommendationEngine().generate_recommendations(stats)`
 6. I need sklearn preprocessing from analysis:
@@ -139,13 +150,22 @@ Use this decision tree:
 ## Quick Start
 
 ```python
+import numpy as np
 import pandas as pd
 
 from preml import quick_eda
 from preml.preprocessing import PreprocessingBuilder
 
 # 1) Load data
-df = pd.read_csv("housing.csv")
+rng = np.random.default_rng(42)
+df = pd.DataFrame(
+    {
+        "LotArea": rng.normal(8000, 1500, 100),
+        "OverallQual": rng.integers(3, 10, 100),
+        "Neighborhood": rng.choice(["A", "B", "C"], 100),
+        "SalePrice": rng.normal(200000, 40000, 100),
+    }
+)
 target = "SalePrice"
 
 # 2) Analyze
@@ -165,6 +185,7 @@ print(X_transformed.shape)
 ## Core Workflow (End-to-End)
 
 ```python
+import numpy as np
 import pandas as pd
 
 from preml.eda import EDAAnalyzer
@@ -172,7 +193,15 @@ from preml.preprocessing import PreprocessingBuilder
 from preml.model_utils import BaselineTrainer
 
 # Data
-_df = pd.read_csv("housing.csv")
+rng = np.random.default_rng(42)
+_df = pd.DataFrame(
+    {
+        "LotArea": rng.normal(8000, 1500, 100),
+        "OverallQual": rng.integers(3, 10, 100),
+        "Neighborhood": rng.choice(["A", "B", "C"], 100),
+        "SalePrice": rng.normal(200000, 40000, 100),
+    }
+)
 _target = "SalePrice"
 
 # Analyze
@@ -259,6 +288,15 @@ Behavior note:
 - `generate_recommendations(analysis_results)`
 - `summarize(recommendations)`
 
+`fit(..., progress_callback=...)` calls the callback as `progress_callback(step, payload)`.
+The callback is triggered at the start of the run, after each major phase,
+and once more at completion. The `payload` argument is always a dictionary.
+
+`fit()` may raise `ValidationTimeoutError` if the configured time budget is
+exceeded during model screening or tuning. In that case, you can either increase
+`time_budget_seconds` or fall back to heuristic recommendations using
+`get_recommendation(X, y)`.
+
 Expected analysis input keys include:
 
 - `duplicates`, `infinite`, `missing`, `outliers`, `feature_profiles`, `correlation_pairs`, `target_profile`
@@ -294,6 +332,9 @@ Important rules:
 - `suggest_features() -> List[Recommendation]`
 
 Suggestion categories include ratio, interaction, binning, power transform, datetime extraction, and categorical crossing where statistically justified.
+
+If `df` is omitted, datetime-based feature suggestions are skipped because the
+engine only uses the analysis result and does not recompute dataset-level facts.
 
 <a id="preml-model-utils"></a>
 ### `preml.model_utils`
@@ -410,23 +451,28 @@ ranking without re-running the statistical analysis.
 import numpy as np
 import pandas as pd
 
-from preml.recommendation_engine import RecommendationEngine
+from preml.recommendation_engine import RecommendationEngine, ValidationTimeoutError
+
+rng = np.random.default_rng(42)
 
 df = pd.DataFrame(
     {
-        "feature1": np.random.randn(1000),
-        "feature2": np.random.randn(1000),
-        "category": np.random.choice(["A", "B", "C"], 1000),
+        "feature1": rng.normal(size=180),
+        "feature2": rng.normal(size=180),
+        "category": rng.choice(["A", "B", "C"], 180),
     }
 )
-y = df["feature1"] * 0.5 + df["feature2"] * 0.3 + np.random.randn(1000) * 0.1
+y = df["feature1"] * 0.5 + df["feature2"] * 0.3 + rng.normal(scale=0.1, size=180)
 
 engine = RecommendationEngine(random_state=42)
-result = engine.fit(df, y, time_budget_seconds=60)
+try:
+    result = engine.fit(df, y, time_budget_seconds=60)
+    print(engine.summarize(result))
+    post_fit = engine.get_recommendation(df, y)
+except ValidationTimeoutError:
+    print("Empirical validation timed out. Falling back to heuristic recommendation.")
+    post_fit = engine.get_recommendation(df, y)
 
-print(engine.summarize(result))
-
-post_fit = engine.get_recommendation(df, y)
 print(post_fit["model"])
 print(post_fit["cv_score"])
 print(post_fit["pipeline"])
@@ -1033,10 +1079,13 @@ for profile in profiles:
     print(profile.column)
 
     # Feature type
-    print(profile.data_type)
+    print(profile.dtype)
 
     # Missing-value percentage
-    print(profile.missing_percent)
+    if profile.numeric_profile is not None:
+        print(profile.numeric_profile.missing_percent)
+    elif profile.categorical_profile is not None:
+        print(profile.categorical_profile.missing_percent)
 ```
 
 The available fields depend on whether the feature is numerical or categorical.
@@ -1052,9 +1101,9 @@ correlations = engine.compute_correlation_pairs()
 # Iterate through every significant correlation
 for pair in correlations:
 
-    print(pair.feature_x)
-    print(pair.feature_y)
-    print(pair.correlation)
+    print(pair.feature_a)
+    print(pair.feature_b)
+    print(pair.coefficient)
 ```
 
 Only statistically meaningful correlation pairs are returned.
@@ -1220,12 +1269,14 @@ import pandas as pd
 from preml.statistics_engine import StatisticsEngine
 from preml.recommendation_engine import RecommendationEngine
 
+rng = np.random.default_rng(42)
+
 df = pd.DataFrame(
     {
-        "feature1": np.random.randn(1000),
-        "feature2": np.random.randn(1000),
-        "category": np.random.choice(["A", "B", "C"], 1000),
-        "target": np.random.randn(1000),
+        "feature1": rng.normal(size=180),
+        "feature2": rng.normal(size=180),
+        "category": rng.choice(["A", "B", "C"], 180),
+        "target": rng.normal(size=180),
     }
 )
 
@@ -1237,9 +1288,9 @@ recommendations = engine.generate_recommendations(analysis)
 
 # 2) Empirical model selection from raw tabular data
 X = df.drop(columns=["target"])
-y = df["feature1"] * 0.5 + df["feature2"] * 0.3 + np.random.randn(1000) * 0.1
+y = df["feature1"] * 0.5 + df["feature2"] * 0.3 + rng.normal(scale=0.1, size=180)
 
-fit_result = engine.fit(X, y, time_budget_seconds=60)
+fit_result = engine.fit(X, y, time_budget_seconds=300)
 print(engine.summarize(fit_result))
 
 post_fit = engine.get_recommendation(X, y)
@@ -2828,7 +2879,7 @@ print(
 
 # Display the fold-by-fold results
 print(
-    evaluation["fold_scores"]
+    evaluation["cv_scores"]
 )
 ```
 
@@ -3451,6 +3502,7 @@ The workflow consists of the following stages:
 
 ```python
 # Import pandas
+import numpy as np
 import pandas as pd
 
 # Import the high-level EDA helper
@@ -3472,7 +3524,14 @@ from preml.report import ReportGenerator
 # Step 1 — Load the dataset
 # ----------------------------------------------------
 
-df = pd.read_csv("data.csv")
+rng = np.random.default_rng(42)
+df = pd.DataFrame(
+    {
+        "feature_num": rng.normal(0, 1, 120),
+        "feature_cat": rng.choice(["A", "B", "C"], 120),
+        "target_column": rng.integers(0, 2, 120),
+    }
+)
 
 # Specify the target column
 target = "target_column"
