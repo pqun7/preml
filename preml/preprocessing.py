@@ -113,6 +113,7 @@ class PreprocessingBuilder:
         self.config = config or default_config
         self.feature_profiles = _get_feature_profiles(analysis_result)
         self.recommendations = _get_recommendations(analysis_result)
+        self._fitted_pipeline: Optional[ColumnTransformer] = None
 
         # Categorise columns
         self.numeric_cols: List[str] = []
@@ -151,6 +152,78 @@ class PreprocessingBuilder:
             len(self.categorical_like_cols),
             self.has_outliers,
         )
+
+    def _validate_input_dataframe(self, df: pd.DataFrame) -> None:
+        """Validate that the incoming DataFrame matches expected feature columns."""
+        if not isinstance(df, pd.DataFrame):
+            raise PreprocessingError(
+                "Input must be a pandas DataFrame.",
+                details="Use the same feature DataFrame structure used during EDA analysis.",
+            )
+
+        expected_cols = {
+            p.column for p in self.feature_profiles if not p.is_constant
+        }
+        missing = sorted(expected_cols - set(df.columns))
+        if missing:
+            raise PreprocessingError(
+                "Input DataFrame is missing required feature columns.",
+                details=(
+                    f"Missing columns: {missing[:10]}. "
+                    "Use the full feature set from analysis_result['feature_profiles'] "
+                    "and exclude the target column from preprocessing input."
+                ),
+            )
+
+    def fit(self, df: pd.DataFrame) -> "PreprocessingBuilder":
+        """Fit and store a preprocessing pipeline on ``df``.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input features DataFrame.
+
+        Returns
+        -------
+        PreprocessingBuilder
+            The builder instance itself for fluent usage.
+        """
+        self._validate_input_dataframe(df)
+        pipeline = self.build_pipeline()
+        pipeline.fit(df)
+        self._fitted_pipeline = pipeline
+        return self
+
+    def transform(self, df: pd.DataFrame) -> np.ndarray:
+        """Transform new data using a previously fitted pipeline.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input features DataFrame.
+
+        Returns
+        -------
+        np.ndarray
+            Dense transformed feature array.
+
+        Raises
+        ------
+        PreprocessingError
+            If the builder has not been fitted yet.
+        """
+        self._validate_input_dataframe(df)
+        if self._fitted_pipeline is None:
+            raise PreprocessingError(
+                "PreprocessingBuilder is not fitted.",
+                details=(
+                    "Call builder.fit(df) before builder.transform(df), or use "
+                    "builder.fit_transform(df) for one-step training transformations."
+                ),
+            )
+
+        transformed = self._fitted_pipeline.transform(df)
+        return np.asarray(transformed)
 
     def build_pipeline(self) -> ColumnTransformer:
         """Build a scikit‑learn ColumnTransformer with appropriate
@@ -312,7 +385,9 @@ class PreprocessingBuilder:
             Transformed feature array (dense, since all encoders use
             ``sparse_output=False``).
         """
+        self._validate_input_dataframe(df)
         pipeline = self.build_pipeline()
         transformed = pipeline.fit_transform(df)
+        self._fitted_pipeline = pipeline
         # The pipeline guarantees dense output (no sparse matrices).
         return np.asarray(transformed)

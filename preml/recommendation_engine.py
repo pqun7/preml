@@ -1086,7 +1086,13 @@ class RecommendationEngine:
         if not isinstance(feature_profiles, list):
             raise RecommendationError("'feature_profiles' must be a list.")
         if not isinstance(outlier_reports, list):
-            raise RecommendationError("'outlier_reports' must be a list.")
+            raise RecommendationError(
+                "'outliers' must be a list.",
+                details=(
+                    "Pass the full output of StatisticsEngine.run_full_analysis() "
+                    "or EDAAnalyzer.run() so the 'outliers' key is present and typed correctly."
+                ),
+            )
         if not isinstance(correlation_pairs, list):
             raise RecommendationError("'correlation_pairs' must be a list.")
 

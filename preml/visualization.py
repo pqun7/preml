@@ -435,7 +435,9 @@ def plot_outlier_summary(
     labels = [o.column for o in non_zero]
     percentages = np.asarray([float(o.outlier_percent) for o in non_zero], dtype=float)
 
-    fig, ax = plt.subplots(figsize=(figsize[0], 0.4 * len(labels)))
+    fig, ax = plt.subplots(
+        figsize=(figsize[0], 0.4 * len(labels)), constrained_layout=True
+    )
     ax.barh(range(len(labels)), percentages, color="coral", edgecolor="black")
     ax.set_yticks(range(len(labels)))
     ax.set_yticklabels(labels)
@@ -444,7 +446,6 @@ def plot_outlier_summary(
     ax.invert_yaxis()
     for i, p in enumerate(percentages):
         ax.text(p + 0.5, i, f"{p:.1f}%", va="center")
-    plt.tight_layout()
     return fig
 
 
@@ -560,12 +561,10 @@ def explain_visualizations(
     ----------
     analysis_result : dict
         Output of `StatisticsEngine.run_full_analysis()`.
-        signed_corrs = corrs.loc[corrs_sorted.index].astype(float)
-        Pre‑computed recommendations from
+    recommendations : dict, optional
+        Pre-computed recommendations from
         `RecommendationEngine.generate_recommendations()`. If not
-        widths = signed_corrs.to_numpy(dtype=float)
-        colors = ["teal" if c >= 0 else "coral" for c in widths]
-        configuration.
+        supplied, recommendations are generated from ``analysis_result``.
     config : MLToolkitConfig, optional
         Configuration used when generating recommendations on the fly.
 

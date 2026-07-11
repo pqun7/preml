@@ -65,7 +65,11 @@ class EDAAnalyzer:
     ) -> None:
         if not isinstance(df, pd.DataFrame):
             raise DataValidationError(
-                "Input must be a pandas DataFrame.", details=type(df)
+                "Input must be a pandas DataFrame.",
+                details=(
+                    f"Received type: {type(df)}. "
+                    "Convert your data with pd.DataFrame(...) before calling EDAAnalyzer."
+                ),
             )
         self.df = df
         self.target = target

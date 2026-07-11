@@ -20,7 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, clone
+from sklearn.base import BaseEstimator, clone, is_classifier
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -153,6 +153,7 @@ def cross_validate(
     cv: int = 5,
     scoring: Union[str, List[str]] = "r2",
     random_state: Optional[int] = None,
+    n_jobs: int = -1,
 ) -> Dict[str, List[float]]:
     """Run k‑fold cross‑validation on a (preprocessing + estimator) pipeline.
 
@@ -181,7 +182,7 @@ def cross_validate(
     """
     cv_splitter = cv
     if random_state is not None and isinstance(cv, int):
-        if np.issubdtype(np.asarray(y).dtype, np.integer):
+        if is_classifier(model):
             cv_splitter = StratifiedKFold(
                 n_splits=cv, shuffle=True, random_state=random_state
             )
@@ -195,7 +196,7 @@ def cross_validate(
         cv=cv_splitter,
         scoring=scoring,
         return_train_score=False,
-        n_jobs=-1,
+        n_jobs=n_jobs,
         error_score="raise",
     )
     # Extract test‑ scores and drop the 'test_' prefix
@@ -380,6 +381,7 @@ class BaselineTrainer:
         cv_results = cross_validate(
             pipeline, X, y, cv=cv, scoring=scoring,
             random_state=self.config.random_state,
+            n_jobs=self.config.n_jobs,
         )
         mean_scores = {k: float(np.mean(v)) for k, v in cv_results.items()}
         std_scores = {k: float(np.std(v)) for k, v in cv_results.items()}

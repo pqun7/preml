@@ -64,10 +64,21 @@ class StatisticsEngine:
                 "Input must be a pandas DataFrame.",
                 details=type(df),
             )
+        if df.empty or df.shape[1] == 0:
+            raise DataValidationError(
+                "Input DataFrame is empty.",
+                details=(
+                    "PreML requires at least one row and one column to perform analysis. "
+                    "Load data and verify filtering steps before calling StatisticsEngine."
+                ),
+            )
         if target is not None and target not in df.columns:
             raise DataValidationError(
                 f"Target column '{target}' not found in DataFrame.",
-                details=list(df.columns[:10]),
+                details=(
+                    f"Available columns (sample): {list(df.columns[:10])}. "
+                    "Pass the exact target column name or set target=None for unsupervised analysis."
+                ),
             )
 
         self.df = df.copy()

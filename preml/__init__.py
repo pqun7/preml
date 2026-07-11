@@ -21,9 +21,8 @@ responsible for a single domain concern:
 - report          : Generates reports in various formats.
 """
 
-__version__ = "0.1.0"
-# TODO: Update author before release
-__author__ = "Your Name <your.email@example.com>"
+__version__ = "0.1.4"
+__author__ = "Ali Nazer <alinazer30@gmail.com>"
 
 # Expose the most commonly used classes and convenience functions
 from preml.config import MLToolkitConfig, default_config

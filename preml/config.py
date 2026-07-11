@@ -10,6 +10,8 @@ heavy external packages (only the standard library).
 from dataclasses import dataclass
 from typing import Literal, Tuple
 
+import pandas as pd
+
 
 @dataclass
 class MLToolkitConfig:
@@ -57,7 +59,7 @@ class MLToolkitConfig:
     # ----------------------------------------------------------------
     # Missingness & Data Quality
     # ----------------------------------------------------------------
-    missing_threshold: float = 0.4
+    missing_threshold: float = 0.25
     low_cardinality_threshold: int = 10
     high_cardinality_threshold: int = 50
     max_unique_for_categorical_like: int = 15
@@ -65,8 +67,8 @@ class MLToolkitConfig:
     # ----------------------------------------------------------------
     # Correlation & Distribution
     # ----------------------------------------------------------------
-    correlation_threshold: float = 0.9
-    skewness_threshold: float = 1.5
+    correlation_threshold: float = 0.8
+    skewness_threshold: float = 1.0
     cv_threshold: float = 2.0
     zero_percent_threshold: float = 50.0
     negative_percent_threshold: float = 5.0
@@ -101,6 +103,47 @@ class MLToolkitConfig:
     # Reproducibility
     # ----------------------------------------------------------------
     random_state: int = 42
+    n_jobs: int = -1
+
+    def adapt_to_dataset(self, df: pd.DataFrame) -> "MLToolkitConfig":
+        """Adapt threshold defaults based on dataset shape and profile.
+
+        This method updates the current instance in-place and returns it,
+        allowing fluent usage:
+
+        ``config = MLToolkitConfig().adapt_to_dataset(df)``
+        """
+        if not isinstance(df, pd.DataFrame):
+            return self
+        if df.empty:
+            return self
+
+        n_rows, n_cols = df.shape
+        numeric_ratio = (
+            float(len(df.select_dtypes(include=["number"]).columns)) / n_cols
+            if n_cols > 0
+            else 0.0
+        )
+
+        # Large, sparse datasets benefit from stricter missingness handling.
+        if n_rows >= 100_000:
+            self.missing_threshold = min(self.missing_threshold, 0.2)
+            self.high_cardinality_threshold = max(self.high_cardinality_threshold, 100)
+
+        # Small datasets: avoid over-reacting to correlation/skew noise.
+        if n_rows < 2_000:
+            self.correlation_threshold = max(self.correlation_threshold, 0.85)
+            self.skewness_threshold = max(self.skewness_threshold, 1.2)
+
+        # Very wide datasets: keep correlation filtering practical.
+        if n_cols >= 200:
+            self.correlation_threshold = min(self.correlation_threshold, 0.75)
+
+        # Mostly categorical data often needs lower high-cardinality split.
+        if numeric_ratio < 0.35:
+            self.high_cardinality_threshold = min(self.high_cardinality_threshold, 40)
+
+        return self
 
 
 # ----------------------------------------------------------------------
