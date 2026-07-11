@@ -22,8 +22,29 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, clone, is_classifier
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import (
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    HistGradientBoostingClassifier,
+    HistGradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
+from sklearn.linear_model import (
+    ElasticNetCV,
+    HuberRegressor,
+    Lasso,
+    LinearRegression,
+    LogisticRegression,
+    LogisticRegressionCV,
+    Ridge,
+    SGDClassifier,
+    SGDRegressor,
+)
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.svm import SVC, SVR
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -71,11 +92,29 @@ _CLASSIFICATION_METRICS: Dict[str, Callable[[np.ndarray, np.ndarray], float]] = 
 # Keys are lowercased, stripped versions of the names used in recommendations.
 _ESTIMATOR_REGISTRY_REGRESSION: Dict[str, Callable[[int], BaseEstimator]] = {
     "linearregression": lambda rs: LinearRegression(),
+    "elasticnetcv": lambda rs: ElasticNetCV(cv=5, random_state=rs),
+    "ridge": lambda rs: Ridge(),
+    "lasso": lambda rs: Lasso(),
+    "huberregressor": lambda rs: HuberRegressor(),
+    "svr": lambda rs: SVR(),
+    "kneighborsregressor": lambda rs: KNeighborsRegressor(),
+    "decisiontreeregressor": lambda rs: DecisionTreeRegressor(random_state=rs),
+    "sgdregressor": lambda rs: SGDRegressor(random_state=rs),
+    "gradientboostingregressor": lambda rs: GradientBoostingRegressor(random_state=rs),
+    "histgradientboostingregressor": lambda rs: HistGradientBoostingRegressor(random_state=rs),
     "randomforestregressor": lambda rs: RandomForestRegressor(random_state=rs),
 }
 
 _ESTIMATOR_REGISTRY_CLASSIFICATION: Dict[str, Callable[[int], BaseEstimator]] = {
     "logisticregression": lambda rs: LogisticRegression(max_iter=1000, random_state=rs),
+    "logisticregressioncv": lambda rs: LogisticRegressionCV(cv=5, max_iter=1000, random_state=rs),
+    "svc": lambda rs: SVC(),
+    "kneighborsclassifier": lambda rs: KNeighborsClassifier(),
+    "gaussiannb": lambda rs: GaussianNB(),
+    "decisiontreeclassifier": lambda rs: DecisionTreeClassifier(random_state=rs),
+    "sgdclassifier": lambda rs: SGDClassifier(random_state=rs),
+    "gradientboostingclassifier": lambda rs: GradientBoostingClassifier(random_state=rs),
+    "histgradientboostingclassifier": lambda rs: HistGradientBoostingClassifier(random_state=rs),
     "randomforestclassifier": lambda rs: RandomForestClassifier(random_state=rs),
 }
 
@@ -378,10 +417,12 @@ class BaselineTrainer:
                 else ["accuracy"]
             )
 
+        n_jobs = getattr(self.config, "n_jobs", -1)
+
         cv_results = cross_validate(
             pipeline, X, y, cv=cv, scoring=scoring,
             random_state=self.config.random_state,
-            n_jobs=self.config.n_jobs,
+            n_jobs=n_jobs,
         )
         mean_scores = {k: float(np.mean(v)) for k, v in cv_results.items()}
         std_scores = {k: float(np.std(v)) for k, v in cv_results.items()}
