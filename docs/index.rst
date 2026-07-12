@@ -3,19 +3,29 @@ PreML Documentation
 
 PreML provides statistically grounded EDA, preprocessing, and recommendation helpers for tabular data.
 
+Recommended quick start:
+
+.. code-block:: python
+
+   import pandas as pd
+   from preml import PreML
+
+   df = pd.DataFrame({"age": [21, 35, 42], "city": ["A", "B", "A"], "target": [0, 1, 0]})
+   ml = PreML(df, target="target")
+   analysis = ml.analyze()
+   print(ml.summary())
+
 Getting Started
 ---------------
 
 .. code-block:: python
 
    import pandas as pd
-   from preml.recommendation_engine import RecommendationEngine
+   from preml import PreML
 
-   X = pd.DataFrame({"age": [21, 35, 42], "city": ["A", "B", "A"]})
-   y = pd.Series([0, 1, 0])
-
-   engine = RecommendationEngine(random_state=42)
-   result = engine.get_recommendation(X, y)
+   df = pd.DataFrame({"age": [21, 35, 42], "city": ["A", "B", "A"], "target": [0, 1, 0]})
+   ml = PreML(df, target="target")
+   result = ml.models()
    print(result["model"])
 
 API Reference

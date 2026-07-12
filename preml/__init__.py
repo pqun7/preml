@@ -21,7 +21,7 @@ responsible for a single domain concern:
 - report          : Generates reports in various formats.
 """
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __author__ = "Ali Nazer <alinazer30@gmail.com>"
 
 # Expose the most commonly used classes and convenience functions
@@ -54,9 +54,28 @@ from preml.schema import (
     PipelineSuggestion,
     ModelRecommendation,
 )
-from preml.eda import quick_eda
+from preml.facade import (
+    PreML,
+    analyze,
+    feature_engineering,
+    models,
+    pipeline,
+    quick_eda,
+    recommendations,
+    report,
+    visualize,
+)
 
 __all__ = [
+    # Facade
+    "PreML",
+    "analyze",
+    "recommendations",
+    "report",
+    "pipeline",
+    "visualize",
+    "feature_engineering",
+    "models",
     # Configuration
     "MLToolkitConfig",
     "default_config",

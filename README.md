@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 # PreML
 
-Production‑ready machine learning toolkit for EDA, preprocessing, and modelling.
+Production-ready machine learning toolkit for EDA, preprocessing, and modelling.
 
 ## 📌 Features
 - Fast and automated Exploratory Data Analysis (EDA).
@@ -23,6 +23,17 @@ pip install pypreml
 
 PreML is a modular Python library for exploratory data analysis, statistical recommendations, preprocessing pipeline generation, and feature engineering guidance for tabular datasets.
 
+The recommended entry point is the high-level facade:
+
+```python
+from preml import PreML
+
+ml = PreML(df, target="target_column")
+analysis = ml.analyze()
+report = ml.report()
+pipeline = ml.pipeline()
+```
+
 The source code now lives inside the `preml/` package directory, which keeps the project organized and matches the installed namespace.
 
 ## What This Project Does
@@ -33,32 +44,25 @@ The source code now lives inside the `preml/` package directory, which keeps the
 - Suggests feature engineering ideas from measurable patterns.
 - Keeps analysis, recommendations, and preprocessing separated into focused modules.
 
-## File Guide
+## Quick Start
 
 Use this map to understand how the current files fit together:
 
 | File | Purpose |
-| --- | --- |
-| [preml/__init__.py](preml/__init__.py) | Package exports and top-level public API. |
+from preml import PreML, analyze
 | [preml/config.py](preml/config.py) | Central thresholds and defaults via `MLToolkitConfig`. |
 | [preml/statistics_engine.py](preml/statistics_engine.py) | Computes dataset facts such as profiles, missingness, outliers, and correlations. |
 | [preml/recommendation_engine.py](preml/recommendation_engine.py) | Converts statistics into recommendations and model guidance. |
-| [preml/eda.py](preml/eda.py) | Orchestrates the full EDA flow and produces summaries. |
-| [preml/preprocessing.py](preml/preprocessing.py) | Builds scikit-learn preprocessing pipelines from EDA results. |
-| [preml/feature_engineering.py](preml/feature_engineering.py) | Proposes new features from statistical evidence. |
-| [preml/visualization.py](preml/visualization.py) | Plotting and visual analysis helpers. |
-| [preml/schema.py](preml/schema.py) | Shared dataclasses used across the library. |
-| [preml/exceptions.py](preml/exceptions.py) | Custom exception hierarchy. |
-| [requirements.txt](requirements.txt) | Runtime dependencies for local installs. |
-| [pyproject.toml](pyproject.toml) | Build metadata and packaging configuration. |
-| [.gitignore](.gitignore) | Ignores caches, build artifacts, notebooks, and local environments. |
-| [tests/](tests/) | Test suite. |
+ml = PreML(df, target="target_column")
+analysis = ml.analyze()
+print(ml.summary())
 
-## Highlights
+# Or use the one-line helper for immediate analysis
+analysis2 = analyze(df, target="target_column")
 
-- Automatic EDA for missing values, outliers, correlation, and feature profiling.
-- Evidence-based recommendations for imputation, encoding, scaling, transformation, and feature selection.
-- Scikit-learn compatible preprocessing pipelines tailored to feature types and data quality signals.
+builder = ml.pipeline()
+X_train = df.drop(columns=["target_column"])
+X = builder.fit_transform(X_train)
 - Feature engineering suggestions grounded in statistical evidence rather than column names.
 - Clean module boundaries that make the package easier to test, extend, and maintain.
 
@@ -114,15 +118,16 @@ X = builder.fit_transform(X_train)
 ## Typical Workflow
 
 1. Load your tabular dataset into a pandas DataFrame.
-2. Run `EDAAnalyzer` or `quick_eda` to compute facts and recommendations.
-3. Build a preprocessing pipeline with `PreprocessingBuilder`.
-4. Inspect the returned schema objects and recommendations to guide modelling decisions.
+2. Start with `PreML(df, target=...)` or `analyze(df, target=...)`.
+3. Use `ml.pipeline()`, `ml.recommendations()`, and `ml.report()` as needed.
+4. Drop down to `EDAAnalyzer`, `StatisticsEngine`, or `RecommendationEngine` only for advanced workflows.
 
 ## Public API
 
-The package exposes the most common shared types at the package root:
+The package exposes the most common shared types and facade helpers at the package root:
 
 ```python
+from preml import PreML, analyze, quick_eda
 from preml import MLToolkitConfig, default_config
 from preml import DataValidationError, RecommendationError
 from preml import FeatureProfile, Recommendation, TargetProfile
@@ -130,6 +135,8 @@ from preml import FeatureProfile, Recommendation, TargetProfile
 
 Useful module entry points:
 
+- `preml.PreML`
+- `preml.analyze`
 - `preml.eda.EDAAnalyzer`
 - `preml.eda.quick_eda`
 - `preml.preprocessing.PreprocessingBuilder`

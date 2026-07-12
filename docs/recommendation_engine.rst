@@ -13,6 +13,7 @@ Example
 
    import numpy as np
    import pandas as pd
+   from preml import PreML
    from preml.recommendation_engine import RecommendationEngine
 
    X = pd.DataFrame({
@@ -21,6 +22,11 @@ Example
        "category": np.random.choice(["A", "B"], 100),
    })
    y = (X["feature1"] + X["feature2"] > 0).astype(int)
+
+   df = X.copy()
+   df["target"] = y
+   ml = PreML(df, target="target")
+   print(ml.analyze()["data_quality_score"])
 
    engine = RecommendationEngine(random_state=42)
    recommendation = engine.generate_recommendations({

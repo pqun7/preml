@@ -6,13 +6,20 @@
 >
 > Unlike many automated machine learning tools, **PreML** does not rely on opaque heuristics. Every recommendation is derived from statistical evidence, enabling reproducible, explainable, and trustworthy machine learning workflows.
 
-PreML is an evidence-driven library for tabular ML workflows. It separates:
+PreML is an evidence-driven library for tabular ML workflows.
 
-1. Statistical fact extraction
-2. Recommendation generation from evidence
-3. Preprocessing pipeline construction
-4. Feature engineering suggestions
-5. Baseline model training and report generation
+The recommended starting point is the high-level facade:
+
+```python
+from preml import PreML
+
+ml = PreML(df, target="target")
+analysis = ml.analyze()
+report = ml.report()
+pipeline = ml.pipeline()
+```
+
+Advanced users can still drop down to `EDAAnalyzer`, `StatisticsEngine`, and `RecommendationEngine`, but the facade should be the default starting point.
 
 This guide is the authoritative reference for the current implementation.
 
@@ -106,18 +113,19 @@ python -m pip install -e .
 
 ```mermaid
 flowchart TD
-     A[pandas DataFrame] --> B[StatisticsEngine]
-     B --> C[RecommendationEngine]
-     B --> D[EDAAnalyzer]
-     C --> D
-     D --> E[PreprocessingBuilder]
-     D --> F[FeatureEngineering]
-     D --> G[BaselineTrainer]
-     D --> H[ReportGenerator]
+    A[pandas DataFrame] --> B[PreML facade]
+    B --> C[EDAAnalyzer]
+    C --> D[StatisticsEngine]
+    C --> E[RecommendationEngine]
+    B --> F[PreprocessingBuilder]
+    B --> G[FeatureEngineering]
+    B --> H[BaselineTrainer]
+    B --> I[ReportGenerator]
 ```
 
 ### Module Responsibilities
 
+- `preml.PreML`: facade that lazily caches analysis and exposes common workflows.
 - `preml.statistics_engine.StatisticsEngine`: computes facts only.
 - `preml.recommendation_engine.RecommendationEngine`: converts facts to recommendations.
 - `preml.eda.EDAAnalyzer`: orchestrates analysis and quality scoring.
@@ -132,19 +140,21 @@ flowchart TD
 Use this decision tree:
 
 1. I just need a one-call analysis result:
-    - Use `quick_eda(df, target=...)`
-2. I need orchestration + summary method:
+    - Use `from preml import analyze` or `PreML(df).analyze()`
+2. I need a reusable high-level object:
+    - Use `PreML(df, target=...).report()` or `PreML(df, target=...).pipeline()`
+3. I need orchestration + summary method:
     - Use `EDAAnalyzer(df, target=...).run()`
-3. I only need statistical facts:
+4. I only need statistical facts:
     - Use `StatisticsEngine(df, target=...).run_full_analysis()`
-4. I need empirical model selection from raw tabular features:
+5. I need empirical model selection from raw tabular features:
     - Use `RecommendationEngine(...).fit(X, y)`
     - Catch `ValidationTimeoutError` if the time budget is exceeded.
-5. I need recommendations from existing stats:
+6. I need recommendations from existing stats:
     - Use `RecommendationEngine().generate_recommendations(stats)`
-6. I need sklearn preprocessing from analysis:
+7. I need sklearn preprocessing from analysis:
     - Use `PreprocessingBuilder(analysis)`
-7. I need baseline model evaluation:
+8. I need baseline model evaluation:
     - Use `BaselineTrainer` with preprocessing pipeline.
 
 ## Quick Start
@@ -153,8 +163,7 @@ Use this decision tree:
 import numpy as np
 import pandas as pd
 
-from preml import quick_eda
-from preml.preprocessing import PreprocessingBuilder
+from preml import PreML, analyze
 
 # 1) Load data
 rng = np.random.default_rng(42)
@@ -166,14 +175,18 @@ df = pd.DataFrame(
         "SalePrice": rng.normal(200000, 40000, 100),
     }
 )
-target = "SalePrice"
 
-# 2) Analyze
-analysis = quick_eda(df, target=target)
+# 2) Analyze through the facade
+ml = PreML(df, target="SalePrice")
+analysis = ml.analyze()
+print(ml.summary())
+
+# One-line shortcut for quick scripts
+analysis2 = analyze(df, target="SalePrice")
 
 # 3) Build preprocessing
-builder = PreprocessingBuilder(analysis)
-X_train = df.drop(columns=[target])
+builder = ml.pipeline()
+X_train = df.drop(columns=["SalePrice"])
 X_transformed = builder.fit_transform(X_train)
 
 # 4) Transform future data with same fitted builder
@@ -188,13 +201,12 @@ print(X_transformed.shape)
 import numpy as np
 import pandas as pd
 
-from preml.eda import EDAAnalyzer
-from preml.preprocessing import PreprocessingBuilder
+from preml import PreML
 from preml.model_utils import BaselineTrainer
 
 # Data
 rng = np.random.default_rng(42)
-_df = pd.DataFrame(
+df = pd.DataFrame(
     {
         "LotArea": rng.normal(8000, 1500, 100),
         "OverallQual": rng.integers(3, 10, 100),
@@ -202,35 +214,46 @@ _df = pd.DataFrame(
         "SalePrice": rng.normal(200000, 40000, 100),
     }
 )
-_target = "SalePrice"
 
 # Analyze
-analyzer = EDAAnalyzer(_df, target=_target)
-analysis = analyzer.run()
-print(analyzer.summary())
+ml = PreML(df, target="SalePrice")
+analysis = ml.analyze()
+print(ml.summary())
 
 # Preprocess
-builder = PreprocessingBuilder(analysis)
-preprocessor = builder.build_pipeline()
+preprocessor = ml.pipeline().build_pipeline()
 
 # Baseline models
 trainer = BaselineTrainer()
 results = trainer.train_baselines(
-     analysis_result=analysis,
-     df=_df,
-     target_col=_target,
-     preprocessing_pipeline=preprocessor,
-     cv=5,
+    analysis_result=analysis,
+    df=df,
+    target_col="SalePrice",
+    preprocessing_pipeline=preprocessor,
+    cv=5,
 )
 
 for row in results:
-     print(row["model_name"], row["mean_scores"])
+    print(row["model_name"], row["mean_scores"])
 ```
 
 ## API Reference
 
 <a id="preml-eda"></a>
 ### `preml.eda`
+
+#### `PreML(df, target=None, config=None, enable_feature_engineering=True)`
+
+Primary user-facing facade.
+
+- `analyze() -> dict`: run and cache analysis.
+- `summary() -> str`: text summary.
+- `recommendations() -> dict`: cached recommendation bundle.
+- `pipeline() -> PreprocessingBuilder`: preprocessing builder from cached analysis.
+- `report(format="text") -> str | Report output`
+- `visualize(kind="all") -> dict`
+- `feature_engineering() -> list`
+- `models(X=None, y=None) -> dict`
 
 #### `EDAAnalyzer(df, target=None, config=None, enable_feature_engineering=True)`
 
@@ -253,9 +276,13 @@ Return keys from `run()`:
 - `data_quality_score`
 - `data_quality_notes`
 
+#### `analyze(df, target=None, config=None, enable_feature_engineering=True) -> dict`
+
+Convenience wrapper around `PreML(...).analyze()`.
+
 #### `quick_eda(df, target=None) -> dict`
 
-Convenience wrapper around `EDAAnalyzer(...).run()`.
+Backward-compatible alias for `analyze(...)`.
 
 <a id="preml-statistics-engine"></a>
 ### `preml.statistics_engine`
